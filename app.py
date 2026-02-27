@@ -591,64 +591,58 @@ def main():
             
             if text_input_method == "Upload File":
                 uploaded_file = st.file_uploader(
-                    "Upload a text document (TXT, DOC, DOCX, PDF)",
-                    type=['txt', 'doc', 'docx', 'pdf'],
-                    help=f"Supported formats: TXT, DOC, DOCX, PDF. Max size: {MAX_FILE_SIZE_MB} MB."
+                    "Upload image file (PNG, JPEG) - OCR will extract text",
+                    type=['png', 'jpg', 'jpeg'],
+                    help=f"Supported formats: PNG, JPG, JPEG. Max size: {MAX_FILE_SIZE_MB} MB."
                 )
                 
                 if uploaded_file:
                     # Validate uploaded file
-                    is_valid, error_msg = validate_uploaded_file(uploaded_file, ALLOWED_TEXT_TYPES)
+                    is_valid, error_msg = validate_uploaded_file(uploaded_file, ALLOWED_IMAGE_TYPES)
                     if not is_valid:
                         st.error(error_msg)
                         st.stop()
                     
                     show_file_info(uploaded_file)
 
-                    if st.button("🚀 Read File & Generate FMEA", type="primary"):
-                        with st.spinner("Reading text from file..."):
-                            file_name = uploaded_file.name.lower()
-                            try:
-                                if file_name.endswith('.txt'):
-                                    extracted_text = uploaded_file.getvalue().decode('utf-8', errors='replace')
-                                elif file_name.endswith('.pdf'):
-                                    import PyPDF2, io
-                                    reader = PyPDF2.PdfReader(io.BytesIO(uploaded_file.getvalue()))
-                                    extracted_text = "\n".join(
-                                        page.extract_text() or "" for page in reader.pages
-                                    )
-                                elif file_name.endswith(('.doc', '.docx')):
-                                    import docx, io
-                                    doc = docx.Document(io.BytesIO(uploaded_file.getvalue()))
-                                    extracted_text = "\n".join(
-                                        para.text for para in doc.paragraphs
-                                    )
+                    # Display uploaded image
+                    col1, col2 = st.columns([1, 2])
+                    
+                    with col1:
+                        st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+                    
+                    with col2:
+                        if st.button("🚀 Extract Text & Generate FMEA", type="primary"):
+                            with st.spinner("Extracting text from image..."):
+                                # Extract text using OCR
+                                extracted_text = extract_text_from_image(uploaded_file)
+                                
+                                # Show extracted text
+                                st.markdown("**Extracted Text:**")
+                                st.text_area("", extracted_text, height=150, key="extracted", disabled=True)
+                                
+                                # Validate OCR output
+                                if not extracted_text or not extracted_text.strip():
+                                    st.error("⚠️ OCR failed to extract any readable text from the image. Please upload a clearer image.")
+                                    st.stop()
+                                elif "Error" in extracted_text or "No text found" in extracted_text:
+                                    st.error(extracted_text)
+                                    st.stop()
                                 else:
-                                    extracted_text = uploaded_file.getvalue().decode('utf-8', errors='replace')
-                            except Exception as e:
-                                st.error(f"⚠️ Failed to read file: {e}")
-                                st.stop()
-                            
-                            # Show extracted text
-                            st.markdown("**Extracted Text:**")
-                            st.text_area("", extracted_text, height=150, key="extracted", disabled=True)
-                            
-                            if not extracted_text or not extracted_text.strip():
-                                st.error("⚠️ The file contains no readable text. Please upload a different file.")
-                                st.stop()
-                            else:
-                                with st.spinner("Generating FMEA from text..."):
-                                    generator = initialize_generator(config)
-                                    texts = [line.strip() for line in extracted_text.split('\n') if line.strip()]
-                                    if not texts:
-                                        st.error("⚠️ No usable text content found in the file. Please try a different file.")
-                                        st.stop()
-                                    fmea_df = generator.generate_from_text(texts, is_file=False)
-                                    st.session_state['fmea_df'] = fmea_df
-                                    st.session_state['fmea_saved'] = False
+                                    with st.spinner("Generating FMEA from extracted text..."):
+                                        generator = initialize_generator(config)
+                                        # Split text into lines
+                                        texts = [line.strip() for line in extracted_text.split('\n') if line.strip()]
+                                        if not texts:
+                                            st.error("⚠️ OCR extracted text contains no usable content. Please try a different image.")
+                                            st.stop()
+                                        fmea_df = generator.generate_from_text(texts, is_file=False)
+                                        st.session_state['fmea_df'] = fmea_df
                 else:
-                    st.info("📤 Please upload a text document (TXT, DOC, DOCX, PDF) to begin.")
-
+                    st.info("📤 Please upload an image file (PNG, JPG, JPEG) to begin.")
+                                        st.session_state['fmea_saved'] = False
+                                else:
+                                    st.error(extracted_text)
             else:
                 text_input = st.text_area(
                     "Enter text (reviews, reports, complaints):",
@@ -753,8 +747,8 @@ def main():
                             generator = initialize_generator(config)
                             fmea_df = generator.generate_from_text(texts, is_file=False)
                             st.session_state['fmea_df'] = fmea_df
-                            st.session_state['fmea_saved'] = False
 
+>>>>>>> main
             else:
                 st.info("📤 Please upload an image or PDF document for OCR extraction.")
 
