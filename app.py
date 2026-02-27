@@ -638,11 +638,10 @@ def main():
                                             st.stop()
                                         fmea_df = generator.generate_from_text(texts, is_file=False)
                                         st.session_state['fmea_df'] = fmea_df
+                                        st.session_state['fmea_saved'] = False
                 else:
                     st.info("📤 Please upload an image file (PNG, JPG, JPEG) to begin.")
-                                        st.session_state['fmea_saved'] = False
-                                else:
-                                    st.error(extracted_text)
+
             else:
                 text_input = st.text_area(
                     "Enter text (reviews, reports, complaints):",
@@ -747,8 +746,8 @@ def main():
                             generator = initialize_generator(config)
                             fmea_df = generator.generate_from_text(texts, is_file=False)
                             st.session_state['fmea_df'] = fmea_df
+                            st.session_state['fmea_saved'] = False
 
->>>>>>> main
             else:
                 st.info("📤 Please upload an image or PDF document for OCR extraction.")
 
